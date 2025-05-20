@@ -13,9 +13,9 @@ pipeline{
                 cleanWs()
             }
         }
-        stage('Checkout from Git'){
-            steps{
-                git branch: 'main', url: 'https://github.com/Aj7Ay/Netflix-clone.git'
+         stage('Checkout from Git') {
+            steps {
+                git branch: 'main', url: 'https://github.com/KabraJiii/DevSecOps-Project-Netflix-Clone.git'
             }
         }
         stage("Sonarqube Analysis "){
@@ -26,13 +26,7 @@ pipeline{
                 }
             }
         }
-        stage("quality gate"){
-           steps {
-                script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
-                }
-            } 
-        }
+        
         stage('Install Dependencies') {
             steps {
                 sh "npm install"
@@ -52,24 +46,28 @@ pipeline{
         stage("Docker Build & Push"){
             steps{
                 script{
-                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){   
-                       sh "docker build --build-arg TMDB_V3_API_KEY=<yourtmdbapikey> -t netflix ."
-                       sh "docker tag netflix amitsinghs98/netflix:latest "
-                       sh "docker push amitsinghs98/netflix:latest "
+                   withCredentials([usernamePassword(credentialsId: 'docker-cred', passwordVariable: 'pass', usernameVariable: 'user')]){
+                       sh "sudo docker login -u ${user} -p ${pass}"
+                       sh "sudo docker build --build-arg TMDB_V3_API_KEY=8c9012a1b3f3713aabb55a41a47bf471 -t netflix ."
+                       sh "sudo docker tag netflix kabrajii/netflix:latest "
+                       sh "sudo docker push kabrajii/netflix:latest "
                     }
                 }
             }
         }
         stage("TRIVY"){
             steps{
-                sh "trivy image amitsinghs98/netflix:latest > trivyimage.txt" 
+                sh "sudo trivy image kabrajii/netflix:latest > trivyimage.txt" 
             }
         }
         stage('Deploy to container'){
             steps{
-                sh 'docker run -d -p 8081:80 amitsinghs98/netflix:latest'
+                sh 'sudo docker run -d -p 8086:80 kabrajii/netflix:latest'
             }
         }
+    }
+}
+
         stage('Deploy to kubernets'){
             steps{
                 script{
@@ -91,7 +89,7 @@ pipeline{
             body: "Project: ${env.JOB_NAME}<br/>" +
                 "Build Number: ${env.BUILD_NUMBER}<br/>" +
                 "URL: ${env.BUILD_URL}<br/>",
-            to: 'amitsinghs2798@gmail.com',                                #change mail here
+            to: 'howtotech017@gmail.com',                                #change mail here
             attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
         }
     }
